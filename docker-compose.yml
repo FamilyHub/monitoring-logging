@@ -1,0 +1,150 @@
+# Docker Compose Configuration for FamilyHub Monitoring Stack
+#
+# This configuration file sets up the complete monitoring infrastructure for FamilyHub.
+# It includes:
+# 1. ELK Stack (Elasticsearch, Logstash, Kibana) for log management
+# 2. Prometheus and Grafana for metrics monitoring
+#
+# Service Dependencies:
+# - Kibana depends on Elasticsearch
+# - Logstash depends on Elasticsearch
+# - Grafana depends on Prometheus
+#
+# Volume Usage:
+# - elasticsearch-data: Persists Elasticsearch indices
+# - prometheus-data: Stores Prometheus time-series data
+# - grafana-data: Saves Grafana dashboards and configs
+#
+# Network:
+# - All services are connected via monitoring-network
+# - Services can communicate using service names as hostnames
+#
+# @author FamilyHub Team
+# @version 1.0
+# @since 2024
+
+version: '3.7'
+
+services:
+  # Elasticsearch Configuration
+  # Primary storage and search engine for logs
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.3
+    container_name: elasticsearch
+    environment:
+      # Configure as single node for development
+      - discovery.type=single-node
+      # Set JVM heap size to prevent memory issues
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      # Expose Elasticsearch HTTP API
+      - "9200:9200"
+      # Expose Elasticsearch transport port
+      - "9300:9300"
+    volumes:
+      # Persist Elasticsearch data
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - monitoring-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q 'status.*green'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Logstash Configuration
+  # Log processing and forwarding service
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.9.3
+    container_name: logstash
+    ports:
+      # Expose port for receiving logs from API Gateway
+      - "5045:5045"
+    volumes:
+      - ./logstash/config:/usr/share/logstash/config
+      - ./logstash/config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - monitoring-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9600 | grep -q 'green'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kibana Configuration
+  # Web interface for log visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.9.3
+    container_name: kibana
+    ports:
+      # Expose Kibana web interface
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - monitoring-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:5601/api/status | grep -q 'Looking good'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus Configuration
+  # Metrics collection and storage
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      # Expose Prometheus web interface
+      - "9090:9090"
+    volumes:
+      # Mount Prometheus configuration
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      # Persist Prometheus data
+      - prometheus-data:/prometheus
+    networks:
+      - monitoring-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana Configuration
+  # Metrics visualization and alerting
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      # Expose Grafana web interface (using port 4000 to avoid conflicts)
+      - "4000:3000"
+    volumes:
+      # Persist Grafana data
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - monitoring-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# Network Configuration
+# Creates a dedicated network for monitoring services
+networks:
+  monitoring-network:
+    driver: bridge
+
+# Volume Configuration
+# Persists data between container restarts
+volumes:
+  elasticsearch-data:
+  prometheus-data:
+  grafana-data: 

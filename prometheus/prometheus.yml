@@ -1,13 +1,35 @@
+# Prometheus Configuration for FamilyHub API Gateway
+# 
+# This configuration file defines how Prometheus collects metrics from our API Gateway service.
+# Prometheus is a time-series database that collects and stores metrics, making them available
+# for querying and alerting.
+#
+# Use Cases:
+# 1. Performance Monitoring: Track response times, request rates, and error rates
+# 2. Resource Usage: Monitor memory, CPU, and thread usage
+# 3. Business Metrics: Track API usage patterns and user behavior
+# 4. System Health: Monitor service availability and health status
+#
+# @author FamilyHub Team
+# @version 1.0
+# @since 2024
+
 global:
+  # How frequently to scrape targets
   scrape_interval: 15s
+  # How frequently to evaluate rules
   evaluation_interval: 15s
 
 scrape_configs:
+  # Configuration for API Gateway metrics
   - job_name: 'api-gateway'
+    # The path to scrape metrics from
     metrics_path: '/actuator/prometheus'
     static_configs:
+      # Target to scrape - using host.docker.internal to access host machine from Docker
       - targets: ['host.docker.internal:8090']
-    metrics_relabel_configs:
+    # Only keep HTTP-related metrics to reduce data volume
+    metric_relabel_configs:
       - source_labels: [__name__]
         regex: 'http_.*'
         action: keep 

@@ -1,0 +1,42 @@
+# Define the deployment for FamilyHub Home service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: familyhub-home     # Name of the deployment
+  labels:
+    app: familyhub-home    # Label to identify the deployment
+spec:
+  replicas: 1              # Number of replicas to run
+  selector:
+    matchLabels:
+      app: familyhub-home  # Label selector for pods
+  template:
+    metadata:
+      labels:
+        app: familyhub-home
+    spec:
+      containers:
+      - name: familyhub-home
+        image: familyhub/familyhub-home:0.0.1-SNAPSHOT  # Your service image
+        ports:
+        - containerPort: 8081    # Service port
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://eureka-server:8761/eureka/"  # Eureka server URL
+        - name: SPRING_DATA_MONGODB_URI
+          value: "mongodb://mongodb:27017/familyhub"  # MongoDB connection URL
+---
+# Define the service for FamilyHub Home
+apiVersion: v1
+kind: Service
+metadata:
+  name: familyhub-home
+spec:
+  selector:
+    app: familyhub-home    # Select pods with this label
+  ports:
+    - port: 8081           # Port exposed by the service
+      targetPort: 8081     # Port on the container
+  type: ClusterIP          # Internal cluster IP 

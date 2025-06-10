@@ -1,0 +1,38 @@
+# Define the deployment for MongoDB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb            # Name of the deployment
+  labels:
+    app: mongodb           # Label to identify the deployment
+spec:
+  replicas: 1              # Number of replicas to run
+  selector:
+    matchLabels:
+      app: mongodb         # Label selector for pods
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:latest  # Official MongoDB image
+        ports:
+        - containerPort: 27017  # Default MongoDB port
+        env:
+        - name: MONGO_INITDB_DATABASE
+          value: familyhub    # Database name
+---
+# Define the service for MongoDB
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  selector:
+    app: mongodb           # Select pods with this label
+  ports:
+    - port: 27017          # Port exposed by the service
+      targetPort: 27017    # Port on the container
+  type: ClusterIP          # Internal cluster IP 

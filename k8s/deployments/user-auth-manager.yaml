@@ -1,0 +1,40 @@
+# Define the deployment for User Auth Manager service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-auth-manager    # Name of the deployment
+  labels:
+    app: user-auth-manager   # Label to identify the deployment
+spec:
+  replicas: 1                # Number of replicas to run
+  selector:
+    matchLabels:
+      app: user-auth-manager # Label selector for pods
+  template:
+    metadata:
+      labels:
+        app: user-auth-manager
+    spec:
+      containers:
+      - name: user-auth-manager
+        image: familyhub/user-auth-manager:0.0.1-SNAPSHOT  # Your service image
+        ports:
+        - containerPort: 8082    # Service port
+        env:
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://eureka-server:8761/eureka/"  # Eureka server URL
+        - name: SPRING_DATA_MONGODB_URI
+          value: "mongodb://mongodb:27017/familyhub"  # MongoDB connection URL
+---
+# Define the service for User Auth Manager
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-auth-manager
+spec:
+  selector:
+    app: user-auth-manager   # Select pods with this label
+  ports:
+    - port: 8082             # Port exposed by the service
+      targetPort: 8082       # Port on the container
+  type: ClusterIP            # Internal cluster IP 

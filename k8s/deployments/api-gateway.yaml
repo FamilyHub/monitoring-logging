@@ -1,0 +1,38 @@
+# Define the deployment for API Gateway
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway        # Name of the deployment
+  labels:
+    app: api-gateway       # Label to identify the deployment
+spec:
+  replicas: 1              # Number of replicas to run
+  selector:
+    matchLabels:
+      app: api-gateway     # Label selector for pods
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: familyhub/apigateway:0.0.1-SNAPSHOT  # Your API Gateway image
+        ports:
+        - containerPort: 8080    # Default API Gateway port
+        env:
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://eureka-server:8761/eureka/"  # Eureka server URL
+---
+# Define the service for API Gateway
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+spec:
+  selector:
+    app: api-gateway       # Select pods with this label
+  ports:
+    - port: 8080           # Port exposed by the service
+      targetPort: 8080     # Port on the container
+  type: LoadBalancer       # External access type 
